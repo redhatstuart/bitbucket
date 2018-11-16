@@ -1,0 +1,93 @@
+- name: Deploy Adaptive Infrastructure Virtual Machine 1
+  hosts: localhost
+  connection: local
+  tasks:
+
+  - name: First make sure resource group is empty
+    azure_rm_resourcegroup:
+      name: 'adaptive1'
+      location: 'westcentralus'
+      force: yes
+      state: absent
+
+  - name: Create a new resource group
+    azure_rm_resourcegroup:
+      name: 'adaptive1'
+      location: 'westcentralus'
+
+  - name: Create VNet for Adaptive1
+    azure_rm_virtualnetwork:
+      resource_group: 'adaptive1'
+      name: 'adaptive1-vnet'
+      address_prefixes: "192.168.0.0/16"
+
+  - name: Create Subnet for Adaptive1
+    azure_rm_subnet:
+      resource_group: 'adaptive1'
+      name: 'adaptive1-subnet'
+      address_prefix: '192.168.1.0/24'
+      virtual_network: 'adaptive1-vnet'
+
+  - name: Create VM Public IP Address
+    azure_rm_publicipaddress:
+      resource_group: 'adaptive1'
+      name: 'adaptive1-pip'
+      allocation_method: Static
+      domain_name: 'adaptive1-vm'
+
+  - name: Create Adaptive NSG
+    azure_rm_securitygroup:
+      resource_group: 'adaptive1'
+      name: 'adaptive1-nsg'
+      rules:
+          - name: 'AllowSSH'
+            access: Allow
+            destination_port_range: 22
+            direction: Inbound
+            priority: 1011
+            protocol: Tcp
+
+  - name: Create Server VM NIC
+    azure_rm_networkinterface:
+      name: 'adaptive1-nic'
+      os_type: Linux
+      public_ip_address_name: 'adaptive1-pip'
+      resource_group: 'adaptive1'
+      security_group_name: 'adaptive1-nsg'
+      subnet_name: 'adaptive1-subnet'
+      virtual_network_name: adaptive1-vnet
+
+  - name: Create Server VM
+    azure_rm_virtualmachine:
+      admin_username: "adaptive"
+      location: 'westcentralus'
+      managed_disk_type: Standard_LRS
+      name: 'adaptive1-vm'
+      network_interface_names: 'adaptive1-nic'
+      os_type: Linux
+      resource_group: 'adaptive1'
+      short_hostname: 'adaptive1-vm'
+      vm_size: Standard_DS3_v2
+      ssh_password_enabled: false
+      ssh_public_keys:
+        - path: /home/adaptive/.ssh/authorized_keys
+          key_data: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+      image:
+        offer: CentOS-LVM
+        publisher: OpenLogic
+        sku: '7-LVM'
+        version: 7.5.20180823
+      data_disks:
+        - lun: 0
+          disk_size_gb: 100
+          managed_disk_type: Standard_LRS
+
+  - name: Examining Public IP Address Facts
+    azure_rm_publicipaddress_facts:
+      resource_group: 'adaptive1'
+      name: 'adaptive1-pip'
+    register: pipoutput
+
+  - name: Dump FQDN
+    debug:
+      msg: "FQDN: {{ pipoutput.ansible_facts.azure_publicipaddresses[0].properties.dnsSettings.fqdn }}"
