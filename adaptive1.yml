@@ -1,44 +1,50 @@
 - name: Deploy Adaptive Infrastructure Virtual Machine 1
   hosts: localhost
   connection: local
-  tasks:
+  vars:
+       adaptive_rg: 'adaptive1-rg'
+       adaptive_host_name: 'adaptive1'
+       adaptive_tld: 'adaptivebiotech.com'
+       admin_user: 'adaptive'
+       azure_dc_location: 'westcentralus'
 
-  - name: First make sure resource group is empty
+  tasks:
+  - name: Make sure resource group is empty
     azure_rm_resourcegroup:
-      name: 'adaptive1'
-      location: 'westcentralus'
+      name: '{{ adaptive_rg }}'
+      location: '{{ azure_dc_location }}'
       force: yes
       state: absent
 
-  - name: Create a new resource group
+  - name: Create new resource group
     azure_rm_resourcegroup:
-      name: 'adaptive1'
-      location: 'westcentralus'
+      name: '{{ adaptive_rg }}'
+      location: '{{ azure_dc_location }}'
 
   - name: Create VNet for Adaptive1
     azure_rm_virtualnetwork:
-      resource_group: 'adaptive1'
-      name: 'adaptive1-vnet'
-      address_prefixes: "192.168.0.0/16"
+      resource_group: '{{ adaptive_rg }}'
+      name: '{{ adaptive_host_name }}-vnet'
+      address_prefixes: "10.10.0.0/16"
 
   - name: Create Subnet for Adaptive1
     azure_rm_subnet:
-      resource_group: 'adaptive1'
-      name: 'adaptive1-subnet'
-      address_prefix: '192.168.1.0/24'
-      virtual_network: 'adaptive1-vnet'
+      resource_group: '{{ adaptive_rg }}'
+      name: '{{ adaptive_host_name }}-subnet'
+      address_prefix: '10.10.0.0/24'
+      virtual_network: '{{ adaptive_host_name }}-vnet'
 
-  - name: Create VM Public IP Address
+  - name: Create VM Public IP Address for Adaptive1
     azure_rm_publicipaddress:
-      resource_group: 'adaptive1'
-      name: 'adaptive1-pip'
+      resource_group: '{{ adaptive_rg }}'
+      name: '{{ adaptive_host_name }}-pip'
       allocation_method: Static
-      domain_name: 'adaptive1-vm'
+      domain_name: '{{ adaptive_host_name }}'
 
-  - name: Create Adaptive NSG
+  - name: Create NSG for Adaptive1
     azure_rm_securitygroup:
-      resource_group: 'adaptive1'
-      name: 'adaptive1-nsg'
+      resource_group: '{{ adaptive_rg }}'
+      name: '{{ adaptive_host_name }}-nsg'
       rules:
           - name: 'AllowSSH'
             access: Allow
@@ -47,26 +53,26 @@
             priority: 1011
             protocol: Tcp
 
-  - name: Create Server VM NIC
+  - name: Create Server VM NIC for Adaptive1
     azure_rm_networkinterface:
-      name: 'adaptive1-nic'
+      name: '{{ adaptive_host_name }}-nic'
       os_type: Linux
-      public_ip_address_name: 'adaptive1-pip'
-      resource_group: 'adaptive1'
-      security_group_name: 'adaptive1-nsg'
-      subnet_name: 'adaptive1-subnet'
-      virtual_network_name: adaptive1-vnet
+      public_ip_address_name: '{{ adaptive_host_name }}-pip'
+      resource_group: '{{ adaptive_rg }}'
+      security_group_name: '{{ adaptive_host_name }}-nsg'
+      subnet_name: '{{ adaptive_host_name }}-subnet'
+      virtual_network_name: '{{ adaptive_host_name }}-vnet'
 
-  - name: Create Server VM
+  - name: Create Server VM Adaptive1
     azure_rm_virtualmachine:
-      admin_username: "adaptive"
-      location: 'westcentralus'
+      admin_username: "{{ admin_user }}"
+      location: '{{ azure_dc_location }}'
       managed_disk_type: Standard_LRS
-      name: 'adaptive1-vm'
-      network_interface_names: 'adaptive1-nic'
+      name: '{{ adaptive_host_name }}-vm.{{ adaptive_tld }}'
+      network_interface_names: '{{ adaptive_host_name }}-nic'
       os_type: Linux
-      resource_group: 'adaptive1'
-      short_hostname: 'adaptive1-vm'
+      resource_group: '{{ adaptive_rg }}'
+      short_hostname: '{{ adaptive_host_name }}-vm'
       vm_size: Standard_DS3_v2
       ssh_password_enabled: false
       ssh_public_keys:
@@ -84,8 +90,8 @@
 
   - name: Examining Public IP Address Facts
     azure_rm_publicipaddress_facts:
-      resource_group: 'adaptive1'
-      name: 'adaptive1-pip'
+      resource_group: '{{ adaptive_rg }}'
+      name: '{{ adaptive_host_name }}-pip'
     register: pipoutput
 
   - name: Dump FQDN
