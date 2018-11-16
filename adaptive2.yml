@@ -1,54 +1,59 @@
 - name: Deploy Adaptive Infrastructure Virtual Machine 2
   hosts: localhost
   connection: local
+  vars:
+       adaptive_rg: 'adaptive2-rg'
+       adaptive_host_name: 'adaptive2'
+       adaptive_tld: 'adaptivebiotech.com'
+       admin_user: 'adaptive'
+       azure_dc_location: 'westcentralus'
+       master_vnet_name: 'adaptive1-vnet'
+       master_vnet_rg: 'adaptive1-rg'
+       subnet_range: '10.10.1.0/24'
+
   tasks:
 
-  - name: First make sure resource group is empty
+  - name: Make sure resource group is empty
     azure_rm_resourcegroup:
-      name: 'adaptive2'
-      location: 'westcentralus'
+      name: '{{ adaptive_rg }}'
+      location: '{{ azure_dc_location }}'
       force: yes
       state: absent
 
-  - name: Create a new resource group
+  - name: Create new resource group
     azure_rm_resourcegroup:
-      name: 'adaptive2'
-      location: 'westcentralus'
+      name: '{{ adaptive_rg }}'
+      location: '{{ azure_dc_location }}'
 
-  - name: Get facts for all virtual networks
+  - name: Get facts for Adaptive1 Master VNet
     azure_rm_virtualnetwork_facts:
-      resource_group: "adaptive1"
-      name: 'adaptive1-vnet'
+      resource_group: "{{ master_vnet_rg }}"
+      name: '{{ master_vnet_name }}'
     register: facts
   - debug:
       msg: 'Adaptive1 VNet: {{ facts.ansible_facts.azure_virtualnetworks[0].properties.addressSpace.addressPrefixes[0]}}'
   - debug:
-      msg: 'Adaptive1 Subnet: {{ facts.ansible_facts.azure_virtualnetworks[0].properties.subnets[0].properties.addressPrefix }}'
+      msg: 'Adaptive1 VNet Resource ID: {{ facts.ansible_facts.azure_virtualnetworks[0].id }}'
 
-  - name: Create VNet for Adaptive2
-    azure_rm_virtualnetwork:
-      resource_group: 'adaptive2'
-      name: 'adaptive2-vnet'
-      address_prefixes: '{{ facts.ansible_facts.azure_virtualnetworks[0].properties.addressSpace.addressPrefixes[0]}}'
-
-  - name: Create Subnet for Adaptive2
+  - name: Verify Subnet for Adaptive2 exists in Adaptive1 VNet
     azure_rm_subnet:
-      resource_group: 'adaptive2'
-      name: 'adaptive2-subnet'
-      address_prefix: '{{ facts.ansible_facts.azure_virtualnetworks[0].properties.subnets[0].properties.addressPrefix }}'
-      virtual_network: 'adaptive2-vnet'
+      resource_group: '{{ master_vnet_rg }}'
+      name: '{{ adaptive_host_name }}-subnet'
+      address_prefix: '{{ subnet_range }}'
+      virtual_network: '{{ master_vnet_name }}'
+      state: 'present'
 
-  - name: Create VM Public IP Address
+  - name: Create VM Public IP Address for Adaptive2
     azure_rm_publicipaddress:
-      resource_group: 'adaptive2'
-      name: 'adaptive2-pip'
+      resource_group: '{{ adaptive_rg }}'
+      name: '{{ adaptive_host_name }}-pip'
       allocation_method: Static
-      domain_name: 'adaptive2-vm'
+      domain_name: '{{ adaptive_host_name }}'
 
-  - name: Create Adaptive NSG
+  - name: Create NSG for Adaptive2
     azure_rm_securitygroup:
-      resource_group: 'adaptive2'
-      name: 'adaptive2-nsg'
+      resource_group: '{{ adaptive_rg }}'
+      name: '{{ adaptive_host_name }}-nsg'
       rules:
           - name: 'AllowSSH'
             access: Allow
@@ -57,26 +62,26 @@
             priority: 1011
             protocol: Tcp
 
-  - name: Create Server VM NIC
+  - name: Create Server VM NIC for Adaptive2
     azure_rm_networkinterface:
-      name: 'adaptive2-nic'
+      name: '{{ adaptive_host_name }}-nic'
       os_type: Linux
-      public_ip_address_name: 'adaptive2-pip'
-      resource_group: 'adaptive2'
-      security_group_name: 'adaptive2-nsg'
-      subnet_name: 'adaptive2-subnet'
-      virtual_network_name: 'adaptive2-vnet'
+      public_ip_address_name: '{{ adaptive_host_name }}-pip'
+      resource_group: '{{ adaptive_rg }}'
+      security_group_name: '{{ adaptive_host_name }}-nsg'
+      subnet_name: '{{ adaptive_host_name }}-subnet'
+      virtual_network_name: '{{ facts.ansible_facts.azure_virtualnetworks[0].id }}'
 
-  - name: Create Server VM
+  - name: Create Server VM Adaptive2
     azure_rm_virtualmachine:
-      admin_username: "adaptive"
-      location: 'westcentralus'
+      admin_username: "{{ admin_user }}"
+      location: '{{ azure_dc_location }}'
       managed_disk_type: Standard_LRS
-      name: 'adaptive2-vm'
-      network_interface_names: 'adaptive2-nic'
+      name: '{{ adaptive_host_name }}-vm.{{ adaptive_tld }}'
+      network_interface_names: '{{ adaptive_host_name }}-nic'
       os_type: Linux
-      resource_group: 'adaptive2'
-      short_hostname: 'adaptive2-vm'
+      resource_group: '{{ adaptive_rg }}'
+      short_hostname: '{{ adaptive_host_name }}-vm'
       vm_size: Standard_DS3_v2
       ssh_password_enabled: false
       ssh_public_keys:
@@ -94,8 +99,8 @@
 
   - name: Examining Public IP Address Facts
     azure_rm_publicipaddress_facts:
-      resource_group: 'adaptive2'
-      name: 'adaptive2-pip'
+      resource_group: '{{ adaptive_rg }}'
+      name: '{{ adaptive_host_name }}-pip'
     register: pipoutput
 
   - name: Dump FQDN
