@@ -49,7 +49,7 @@ echo " "
 
 echo "Verifying accelerated networking is functioning..."
 echo "**************************************************"
-if [ "`ethtool -S eth0 | grep vf_rx_bytes |awk '{print $2}'`" -gt "0" ]
+if [ "`ethtool -S eth0 | grep -v cpu | grep vf_rx_bytes |awk '{print $2}'`" -gt "0" ]
 then
    echo -e "Accelerated networking is ${GREEN}enabled${NC} and appears to be functioning."
 else
