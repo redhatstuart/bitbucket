@@ -59,10 +59,14 @@ fi
 echo " "
 echo " "
 
-echo "Checking if SCSI blk-mq is enabled at boot..."
-echo "*********************************************"
-if [ -z "`grep -i "scsi_mod.use_blk_mq=y" /etc/default/grub`" ]; then
- echo "SCSI blk-mq is not found. Adding."
+echo "Checking if SCSI blk-mq is enabled on this host..."
+echo "**************************************************"
+if [ "`cat /sys/module/scsi_mod/parameters/use_blk_mq | tr '[:upper:]' '[:lower:]'`" = "n"  ]; then
+ if [ -n "`grep -i "scsi_mod.use_blk_mq=y" /boot/grub2/grub.cfg`" ]; then
+  echo -e "SCSI blk-mq is ${RED}*NOT*${NC} currently enabled on this host, however the grub configuration file has been updated to ${GREEN}enable${NC} it on next boot."
+  exit 0
+ fi
+ echo -e "SCSI blk-mq is ${RED}*NOT*${NC} enabled. Adding."
  sed -i 's/GRUB_CMDLINE_LINUX="[^"]*/& scsi_mod.use_blk_mq=Y/' /etc/default/grub
  echo "Validating that /etc/default/grub has been updated."
  if [ -n "`grep -i "scsi_mod.use_blk_mq=y" /etc/default/grub`" ]; then
@@ -77,5 +81,5 @@ if [ -z "`grep -i "scsi_mod.use_blk_mq=y" /etc/default/grub`" ]; then
   echo "Changes to /boot/grub2/grub.cfg are successful and will take effect on next reboot"
  fi
 else
- echo "SCSI blk-mq is already enabled on this host."
+ echo -e "SCSI blk-mq is already ${GREEN}enabled${NC} on this host."
 fi
