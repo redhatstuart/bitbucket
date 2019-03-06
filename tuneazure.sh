@@ -9,7 +9,7 @@ echo " "
 
 echo "Downloading latest Azure tuneable file..."
 echo "*****************************************"
-wget -N -q -P /etc/sysctl.d http://wolverine.itscloudy.af/config/98-rhel7-azure-sysctl.conf
+wget -N -q -P /etc/sysctl.d https://raw.githubusercontent.com/stuartatmicrosoft/bitbucket/master/98-rhel7-azure-sysctl.conf
 
 echo " "
 echo " "
