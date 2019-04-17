@@ -1,0 +1,52 @@
+- name: Deploy AKS
+  hosts: localhost
+  connection: local
+
+  vars:
+       resource_group: "jasondel-aks3"
+       aks_name: "test-internal-lb2"
+       dns_prefix: "jasondel-aks"
+       location: "eastus"
+       kversion: "1.12.7"
+       node_size: "Standard_DS2_v2"
+       node_count: "1"
+       admin_username: "admin"
+
+  tasks:
+
+    - name: Create AKS Resource Group
+      azure_rm_resourcegroup:
+        name: "{{ resource_group }}"
+        location: "{{ location }}"
+
+    - name: Create AKS Virtual Network
+      azure_rm_virtualnetwork:
+        resource_group: "{{ resource_group }}"
+        name: "{{ aks_name }}-vnet"
+        address_prefixes: "10.0.0.0/8"
+
+    - name: Create AKS Subnet
+      azure_rm_subnet:
+        resource_group: '{{ resource_group }}'
+        name: "{{ aks_name }}-subnet"
+        address_prefix: "10.241.0.0/16"
+        virtual_network: "{{ aks_name }}-vnet"
+ 
+    - name: Create a managed Azure Container Services (AKS) instance
+      azure_rm_aks:
+        name: "{{ aks_name }}"
+        resource_group: "{{ resource_group }}"
+        kubernetes_version: "{{ kversion }}"
+        dns_prefix: "{{ dns_prefix }}"
+        linux_profile:
+          admin_username: "{{ admin_username }}"
+          ssh_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+        service_principal:
+          client_id: "{{ lookup('env', 'AZURE_CLIENT_ID') }}"
+          client_secret: "{{ lookup('env', 'AZURE_SECRET') }}"
+        agent_pool_profiles:
+          - name: default
+            count: "{{ node_count }}"
+            vm_size: "{{ node_size }}"
+        tags:
+          Environment: GBBDemo
