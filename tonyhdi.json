@@ -1,6 +1,8 @@
 {
     "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
     "contentVersion": "0.9.0.0",
+    "variables": {
+        },
     "parameters": {
         "clusterName": {
             "type": "string",
@@ -16,7 +18,7 @@
             }
         },
         "clusterLoginPassword": {
-            "type": "securestring",
+            "type": "string",
             "metadata": {
                 "description": "The password must be at least 10 characters in length and must contain at least one digit, one non-alphanumeric character, and one upper or lower case letter."
             }
@@ -57,7 +59,7 @@
             }
         },
         "sshPublicKey": {
-            "type": "securestring"
+            "type": "string"
         }
     },
     "resources": [
