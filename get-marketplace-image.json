@@ -1,0 +1,11 @@
+{
+	"location": "$AZUREDC",
+	"properties": {
+		"creationData": {
+			"createOption": "FromImage",
+			"imageReference": {
+				"id": "/Subscriptions/$SUBID/Providers/Microsoft.Compute/Locations/$AZUREDC/Publishers/$PUBLISHER/ArtifactTypes/VMImage/Offers/$OFFER/Skus/$SKU/Versions/$VERSION"
+			}
+		}
+	}
+}
