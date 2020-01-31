@@ -60,10 +60,11 @@ sleep 5
 
 # Create RG and make API call
 az group create --name $RG_NAME --location $AZUREDC
-cat request.json | envsubst | curl -v -X PUT -H 'Content-Type: application/json; charset=utf-8' -H 'Authorization: Bearer '$TOKEN'' -d @- https://management.azure.com/subscriptions/$SUBID/resourceGroups/$RG_NAME/providers/Microsoft.Compute/disks/$DISKNAME?api-version=2019-07-01
+cat get-marketplace-image.json | envsubst | curl -v -X PUT -H 'Content-Type: application/json; charset=utf-8' -H 'Authorization: Bearer '$TOKEN'' -d @- https://management.azure.com/subscriptions/$SUBID/resourceGroups/$RG_NAME/providers/Microsoft.Compute/disks/$DISKNAME?api-version=2019-07-01
 
 # Output
-
+echo " "
+echo " "
 echo "To create the disk image, execute 'az image create -n $DISKNAME-image -g $RG_NAME --source $DISKNAME --os-type X' where 'X' is either 'Windows' or 'Linux' depending on the type of image."
 
 exit 0
